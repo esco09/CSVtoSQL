@@ -1,4 +1,5 @@
 ﻿using System;
+using Azure.Identity;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 
@@ -6,13 +7,27 @@ using Microsoft.Extensions.Configuration;
 
 namespace CSVtoSQL
 {
-    class Startup : FunctionsStartup
+    public class Startup : FunctionsStartup
     {
+        private IConfiguration _configuration;
+
         public override void ConfigureAppConfiguration(IFunctionsConfigurationBuilder builder)
         {
-            builder.ConfigurationBuilder
+            var configuration = builder.ConfigurationBuilder
                 .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
-                .AddEnvironmentVariables();
+                .AddEnvironmentVariables()
+                .Build();
+
+            builder.ConfigurationBuilder.AddAzureAppConfiguration(options =>
+            {
+                options.Connect(configuration["ConnectionStrings:AppConfig"])
+                        .ConfigureKeyVault(kv =>
+                        {
+                            kv.SetCredential(new DefaultAzureCredential());
+                        });
+            });
+
+            _configuration = builder.ConfigurationBuilder.Build();
         }
 
         public override void Configure(IFunctionsHostBuilder builder)

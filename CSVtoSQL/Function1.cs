@@ -15,6 +15,7 @@ using System.Data;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
+using System.Net;
 
 namespace CSVtoSQL
 {
@@ -32,30 +33,37 @@ namespace CSVtoSQL
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
             ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
+            try
+            {
+                log.LogInformation("C# HTTP trigger function processed a request.");
 
-            //string name = req.Query["name"];
+                //string name = req.Query["name"];
 
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            var data = JsonConvert.DeserializeObject<RequestBody>(requestBody);
-            // = name ?? data?.name;
+                string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+                var data = JsonConvert.DeserializeObject<RequestBody>(requestBody);
+                // = name ?? data?.name;
 
-            var tableCSV = CreateDataTable(data.ColumnMappings);
-            var file = await GetBlob(data.FileLocation, data.FileName);
-            var tblInsert = await ReadBlobAsync(file, tableCSV);
-            await InsertCSVRecords(data.TableName, tblInsert, data.ColumnMappings);
+                var tableCSV = CreateDataTable(data.ColumnMappings);
+                var file = await GetBlob(data.FileLocation, data.FileName);
+                var tblInsert = await ReadBlobAsync(file, tableCSV);
+                await InsertCSVRecords(data.TableName, tblInsert, data.ColumnMappings);
 
-            /* string responseMessage = string.IsNullOrEmpty(name)
-                 ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-                 : $"Hello, {name}. This HTTP triggered function executed successfully.";*/
+                /* string responseMessage = string.IsNullOrEmpty(name)
+                     ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
+                     : $"Hello, {name}. This HTTP triggered function executed successfully.";*/
 
-            string responseMessage = $"File has been processed successfully";
-            return new OkObjectResult(responseMessage);
+                string responseMessage = $"File has been processed successfully";
+                return new OkObjectResult(responseMessage);
+            }
+            catch (Exception ex)
+            {
+                return new ObjectResult(ex.Message) { StatusCode = (int)HttpStatusCode.InternalServerError };
+            }
         }
 
         private async Task InsertCSVRecords(string tableName, DataTable csvRecords, List<ColumnMapping> columnMappings)
         {
-            string connString = _configuration["ConnectionStrings:SqlConnection"];
+            string connString = _configuration["SqlConnectionString"];
 
             using SqlConnection sqlConnection = new SqlConnection(connString);
             sqlConnection.Open();
@@ -73,7 +81,7 @@ namespace CSVtoSQL
 
         private async Task<BlobDownloadInfo> GetBlob(string fileLocation, string filename)
         {
-            var connString = _configuration["ConnectionStrings:StorageConnection"];
+            var connString = _configuration["StorageConnectionString"];
             BlobServiceClient blobServiceClient = new BlobServiceClient(connString);
             BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(fileLocation);
             BlobClient blobClient = containerClient.GetBlobClient(filename);
