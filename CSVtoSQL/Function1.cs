@@ -7,15 +7,14 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Data.SqlClient;
-using Microsoft.VisualBasic.FileIO;
 using Newtonsoft.Json;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using System.Data;
-using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using System.Net;
+using System.Text.RegularExpressions;
 
 namespace CSVtoSQL
 {
@@ -57,7 +56,8 @@ namespace CSVtoSQL
             }
             catch (Exception ex)
             {
-                return new ObjectResult(ex.Message) { StatusCode = (int)HttpStatusCode.InternalServerError };
+                var errMsg = ex.Message + "\n" + ex.StackTrace;
+                return new ObjectResult(errMsg) { StatusCode = (int)HttpStatusCode.InternalServerError };
             }
         }
 
@@ -92,6 +92,7 @@ namespace CSVtoSQL
 
         private async Task<DataTable> ReadBlobAsync(BlobDownloadInfo file, DataTable tblcsv)
         {
+            Regex CSVParser = new Regex(",(?=(?:[^\"]*\"[^\"]*\")*(?![^\"]*\"))");
             int rowCount = 0;
             
             using (var streamReader = new StreamReader(file.Content))
@@ -108,7 +109,8 @@ namespace CSVtoSQL
                     int colCount = 0;
                     tblcsv.Rows.Add();
 
-                    foreach (string column in line.Split(','))
+                    //foreach (string column in line.Split(','))
+                    foreach (string column in CSVParser.Split(line))
                     {
                         tblcsv.Rows[tblcsv.Rows.Count - 1][colCount] = tblcsv.Columns[colCount].ColumnName == "ISN" ? rowCount.ToString() : column;                    
                         colCount++;
@@ -118,34 +120,6 @@ namespace CSVtoSQL
                     //Console.WriteLine(line);
                 }
             }
-            /*
-            using (TextFieldParser csvReader = new TextFieldParser(file.Content))
-            {
-                csvReader.SetDelimiters(new string[] { "," });
-                csvReader.HasFieldsEnclosedInQuotes = true;
-
-                while (!csvReader.EndOfData)
-                {
-                    var line = csvReader.ReadFields();
-                    if (rowCount == 0)
-                    {
-                        rowCount++;
-                        continue;
-                    }
-
-                    int colCount = 0;
-                    tblcsv.Rows.Add();
-
-                    foreach (string column in line)
-                    {
-                        tblcsv.Rows[tblcsv.Rows.Count - 1][colCount] = tblcsv.Columns[colCount].ColumnName == "ISN" ? rowCount.ToString() : column;
-                        colCount++;
-                    }
-
-                    rowCount++;
-                }
-            }*/
-
 
             return tblcsv;
         }

@@ -9,8 +9,6 @@ namespace CSVtoSQL
 {
     public class Startup : FunctionsStartup
     {
-        private IConfiguration _configuration;
-
         public override void ConfigureAppConfiguration(IFunctionsConfigurationBuilder builder)
         {
             var configuration = builder.ConfigurationBuilder
@@ -20,14 +18,15 @@ namespace CSVtoSQL
 
             builder.ConfigurationBuilder.AddAzureAppConfiguration(options =>
             {
-                options.Connect(configuration["ConnectionStrings:AppConfig"])
-                        .ConfigureKeyVault(kv =>
-                        {
-                            kv.SetCredential(new DefaultAzureCredential());
-                        });
+                //options.Connect(configuration["ConnectionStrings:AppConfig"])
+                options.Connect(new Uri(configuration["AppConfigEndpoint"]), new DefaultAzureCredential())
+                    .ConfigureKeyVault(kv =>
+                    {
+                        kv.SetCredential(new DefaultAzureCredential());
+                    });
             });
 
-            _configuration = builder.ConfigurationBuilder.Build();
+            builder.ConfigurationBuilder.Build();
         }
 
         public override void Configure(IFunctionsHostBuilder builder)
