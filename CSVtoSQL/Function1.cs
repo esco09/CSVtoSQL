@@ -52,12 +52,27 @@ namespace CSVtoSQL
                      : $"Hello, {name}. This HTTP triggered function executed successfully.";*/
 
                 string responseMessage = $"File has been processed successfully";
-                return new OkObjectResult(responseMessage);
+                var responseBody = new ResponseBody
+                {
+                    HttpResponseCode = (int)HttpStatusCode.OK,
+                    Message = responseMessage
+                };
+
+                return new OkObjectResult(JsonConvert.SerializeObject(responseBody));
             }
             catch (Exception ex)
             {
                 var errMsg = ex.Message + "\n" + ex.StackTrace;
-                return new ObjectResult(errMsg) { StatusCode = (int)HttpStatusCode.InternalServerError };
+                var responseBody = new ResponseBody
+                {
+                    HttpResponseCode = (int)HttpStatusCode.InternalServerError,
+                    Message = errMsg
+                };
+
+                return new ObjectResult(JsonConvert.SerializeObject(responseBody)) 
+                { 
+                    StatusCode = (int)HttpStatusCode.InternalServerError 
+                };
             }
         }
 
