@@ -78,20 +78,23 @@ namespace CSVtoSQL
 
         private async Task InsertCSVRecords(string tableName, DataTable csvRecords, List<ColumnMapping> columnMappings)
         {
-            string connString = _configuration["SqlConnectionString"];
+            string connString = _configuration["SqlConnectionStringMI"];
 
-            using SqlConnection sqlConnection = new SqlConnection(connString);
-            sqlConnection.Open();
-
-            using SqlBulkCopy bulkCopy = new SqlBulkCopy(connString);
-
-            bulkCopy.DestinationTableName = tableName;
-            foreach (var mapping in columnMappings)
+            using (SqlConnection sqlConnection = new SqlConnection(connString))
             {
-                bulkCopy.ColumnMappings.Add(mapping.Source, mapping.Destination);
-            }
+                sqlConnection.AccessToken = await (new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider()).GetAccessTokenAsync("https://database.windows.net/");
+                sqlConnection.Open();
 
-            await bulkCopy.WriteToServerAsync(csvRecords);
+                using SqlBulkCopy bulkCopy = new SqlBulkCopy(sqlConnection);
+
+                bulkCopy.DestinationTableName = tableName;
+                foreach (var mapping in columnMappings)
+                {
+                    bulkCopy.ColumnMappings.Add(mapping.Source, mapping.Destination);
+                }
+
+                await bulkCopy.WriteToServerAsync(csvRecords);
+            }
         }
 
         private async Task<BlobDownloadInfo> GetBlob(string fileLocation, string filename)
