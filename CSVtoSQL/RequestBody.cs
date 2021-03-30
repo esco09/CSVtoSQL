@@ -17,4 +17,10 @@ namespace CSVtoSQL
         public string Source { get; set; }
         public string Destination { get; set; }
     }
+
+    public class ResponseBody
+    {
+        public int HttpResponseCode { get; set; }
+        public string Message { get; set; }
+    }
 }
