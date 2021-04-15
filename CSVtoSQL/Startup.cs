@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 
@@ -18,10 +20,16 @@ namespace CSVtoSQL
             var configuration = builder.ConfigurationBuilder
                 .SetBasePath(basePath)
                 .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddEnvironmentVariables()
                 .Build();
 
+            var secretClient = new SecretClient(
+                new Uri($"https://{configuration["KeyVaultName"]}.vault.azure.net/"),
+                new DefaultAzureCredential());
+
+            builder.ConfigurationBuilder.AddAzureKeyVault(secretClient, new KeyVaultSecretManager());
+
+            /*
             builder.ConfigurationBuilder.AddAzureAppConfiguration(options =>
             {
                 //options.Connect(configuration["ConnectionStrings:AppConfig"])
@@ -30,7 +38,7 @@ namespace CSVtoSQL
                     {
                         kv.SetCredential(new DefaultAzureCredential());
                     });
-            });
+            });*/
 
             builder.ConfigurationBuilder.Build();
         }
