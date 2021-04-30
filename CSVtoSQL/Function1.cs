@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using System.Net;
 using System.Text.RegularExpressions;
+using Azure.Identity;
 
 namespace CSVtoSQL
 {
@@ -43,7 +44,7 @@ namespace CSVtoSQL
                 // = name ?? data?.name;
 
                 var tableCSV = CreateDataTable(data.ColumnMappings);
-                var file = await GetBlob(data.FileLocation, data.FileName);
+                var file = await GetBlob(data.ContainerName, data.FileName);
                 var tblInsert = await ReadBlobAsync(file, tableCSV);
                 await InsertCSVRecords(data.TableName, tblInsert, data.ColumnMappings);
 
@@ -68,6 +69,8 @@ namespace CSVtoSQL
                     HttpResponseCode = (int)HttpStatusCode.InternalServerError,
                     Message = errMsg
                 };
+
+                log.LogError(errMsg, HttpStatusCode.InternalServerError);
 
                 return new ObjectResult(JsonConvert.SerializeObject(responseBody)) 
                 { 
@@ -97,11 +100,20 @@ namespace CSVtoSQL
             }
         }
 
-        private async Task<BlobDownloadInfo> GetBlob(string fileLocation, string filename)
+        private async Task<BlobDownloadInfo> GetBlob(string containerName, string filename)
         {
-            var connString = _configuration["StorageConnectionString"];
-            BlobServiceClient blobServiceClient = new BlobServiceClient(connString);
-            BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(fileLocation);
+            //var connString = _configuration["StorageConnectionString"];
+            //BlobServiceClient blobServiceClient = new BlobServiceClient(connString);
+            //BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(fileLocation);
+
+            string accountName = _configuration["BlobStorageAccountName"];
+            string containerEndpoint = string.Format("https://{0}.blob.core.windows.net/{1}",
+                                                accountName,
+                                                containerName);
+
+            BlobContainerClient containerClient = new BlobContainerClient(new Uri(containerEndpoint),
+                                                                    new DefaultAzureCredential());
+
             BlobClient blobClient = containerClient.GetBlobClient(filename);
             BlobDownloadInfo download = await blobClient.DownloadAsync();
 

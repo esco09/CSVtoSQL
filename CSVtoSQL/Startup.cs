@@ -27,7 +27,7 @@ namespace CSVtoSQL
                 new Uri($"https://{configuration["KeyVaultName"]}.vault.azure.net/"),
                 new DefaultAzureCredential());
 
-            builder.ConfigurationBuilder.AddAzureKeyVault(secretClient, new KeyVaultSecretManager());
+           builder.ConfigurationBuilder.AddAzureKeyVault(secretClient, new KeyVaultSecretManager());
 
             /*
             builder.ConfigurationBuilder.AddAzureAppConfiguration(options =>
